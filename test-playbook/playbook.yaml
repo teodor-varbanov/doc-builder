@@ -1,0 +1,131 @@
+---
+- name: Set up a web server and deploy a sample application
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+    - vars/db.yml
+    - vars/web.yml
+
+  tasks:
+    # Install Apache on Debian-based systems
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: present
+      when: ansible_os_family == "Debian"
+
+    # Start and enable Apache service on Debian-based systems
+    - name: Start and enable Apache service
+      service:
+        name: apache2
+        state: started
+        enabled: yes
+      when: ansible_os_family == "Debian"
+
+    # Install IIS on Windows systems
+    - name: Install IIS
+      win_feature:
+        name: Web-Server
+        state: present
+      when: ansible_os_family == "Windows"
+
+    # Start and enable IIS service on Windows systems
+    - name: Start and enable IIS service
+      win_service:
+        name: W3Svc
+        state: started
+        start_mode: auto
+      when: ansible_os_family == "Windows"
+
+    # Install MySQL server on Debian-based systems
+    - name: Install MySQL server
+      apt:
+        name: mysql-server
+        state: present
+      when: ansible_os_family == "Debian"
+
+    # Start and enable MySQL service on Debian-based systems
+    - name: Start and enable MySQL service
+      service:
+        name: mysql
+        state: started
+        enabled: yes
+      when: ansible_os_family == "Debian"
+
+    # Create database on Debian-based systems
+    - name: Create database
+      mysql_db:
+        name: "{{ db_name }}"
+        state: present
+      when: ansible_os_family == "Debian" and db_create
+
+    # Create database user on Debian-based systems
+    - name: Create database user
+      mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        priv: "{{ db_name }}.*:ALL"
+        state: present
+      when: ansible_os_family == "Debian" and db_create
+
+    # Upload sample application to all systems
+    - name: Upload sample application
+      copy:
+        src: files/sample_app.tar.gz
+        dest: /tmp/sample_app.tar.gz
+      when: ansible_os_family == "Debian"
+
+    - name: Upload sample application
+      win_copy:
+        src: files/sample_app.tar.gz
+        dest: C:\tmp\sample_app.tar.gz
+      when: ansible_os_family == "Windows"
+
+    # Extract sample application on Debian-based systems
+    - name: Extract sample application
+      unarchive:
+        src: /tmp/sample_app.tar.gz
+        dest: /var/www/html/
+        remote_src: yes
+      when: ansible_os_family == "Debian"
+
+    # Extract sample application on Windows systems
+    - name: Extract sample application
+      win_unzip:
+        src: C:\tmp\sample_app.tar.gz
+        dest: C:\inetpub\wwwroot\
+      when: ansible_os_family == "Windows"
+
+    # Configure Apache virtual host on Debian-based systems
+    - name: Configure Apache virtual host
+      template:
+        src: templates/index.html.j2
+        dest: /var/www/html/index.html
+      notify:
+        - Restart Apache
+      when: ansible_os_family == "Debian"
+
+    # Configure IIS virtual host on Windows systems
+    - name: Configure IIS virtual host
+      win_template:
+        src: templates/index.html.j2
+        dest: C:\inetpub\wwwroot\index.html
+      notify:
+        - Restart IIS
+      when: ansible_os_family == "Windows"
+
+  handlers:
+    # Restart Apache service on Debian-based systems
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
+      when: ansible_os_family == "Debian"
+
+    # Restart IIS service on Windows systems
+    - name: Restart IIS
+      win_service:
+        name: W3Svc
+        state: restarted
+      when: ansible_os_family == "Windows"
