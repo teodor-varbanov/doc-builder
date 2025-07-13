@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func yamlExtractor(fileLocation string) []string {
+func yamlExtractor(fileLocation string) string {
 
 	var result []string
 
@@ -17,7 +17,6 @@ func yamlExtractor(fileLocation string) []string {
 		log.Fatal(err)
 	}
 	scanner := bufio.NewScanner(strings.NewReader(string(file)))
-	// Set the split function for the scanning operation.
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), "#") || strings.Contains(scanner.Text(), "- name:") || strings.Contains(scanner.Text(), "when:") {
@@ -31,7 +30,7 @@ func yamlExtractor(fileLocation string) []string {
 			fmt.Fprintln(os.Stderr, "reading input:", err)
 		}
 	}
-	fmt.Printf("%v", result)
-	return result
+	prettyResult := strings.Join(result[:], "\n")
+	return prettyResult
 
 }
